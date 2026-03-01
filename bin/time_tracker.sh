@@ -37,6 +37,11 @@ precmd_track_metrics() {
 
         local display_cmd=${_LAST_CMD:0:30}
         
+        if [[ ! -f "$LOG_FILE" ]]; then
+            echo "TIMESTAMP           | COMMAND                        | STATUS  | DURATION" > "$LOG_FILE"
+            echo "--------------------------------------------------------------------------" >> "$LOG_FILE"
+        fi
+        
         printf "%-19s | %-30s | %-7s | %s\n" \
             "$(date +"$DATE_FORMAT")" \
             "$display_cmd" \
