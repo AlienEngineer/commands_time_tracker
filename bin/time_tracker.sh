@@ -21,6 +21,19 @@ format_time() {
 }
 
 preexec_track_metrics() {
+    local exit_code=$?
+    
+    # 1. Check if the command is empty or missing
+    if [[ -z "$_LAST_CMD" || -z "$_STEP_START" ]]; then return; fi
+
+    # 2. Filter: Only proceed if the command contains our keywords
+    # This regex checks for any of these words anywhere in the command
+    if [[ ! "$_LAST_CMD" =~ (flutter|dart|make|pod|gradle|cache) ]]; then
+        unset _LAST_CMD
+        unset _STEP_START
+        return
+    fi
+    
     _STEP_START=$EPOCHREALTIME
     _LAST_CMD="$1"
 }
