@@ -5,60 +5,107 @@ DATE_FORMAT="%Y-%m-%d %H:%M:%S"
 
 
 format_time() {
-    local -i total=$(( $1 + 0.5 )) 
-    
-    local h=$(( total / 3600 ))
-    local m=$(( (total % 3600) / 60 ))
-    local s=$(( total % 60 ))
-    
-    if (( h > 0 )); then
-        printf "%dh %dm %ds" $h $m $s
-    elif (( m > 0 )); then
-        printf "%dm %ds" $m $s
-    else
-        printf "%ds" $s
-    fi
+  local -i total=$(( $1 + 0.5 )) 
+
+  local h=$(( total / 3600 ))
+  local m=$(( (total % 3600) / 60 ))
+  local s=$(( total % 60 ))
+
+  if (( h > 0 )); then
+    printf "%dh %dm %ds" $h $m $s
+  elif (( m > 0 )); then
+    printf "%dm %ds" $m $s
+  else
+    printf "%ds" $s
+  fi
 }
 
 preexec_track_metrics() {
-    _STEP_START=$EPOCHREALTIME
-    _LAST_CMD="$1"
+  _STEP_START=$EPOCHREALTIME
+  _LAST_CMD="$1"
 }
+
 
 precmd_track_metrics() {
-    local exit_code=$?
-    
-    if [[ -n "$_LAST_CMD" && -n "$_STEP_START" ]]; then
-        local end_step=$EPOCHREALTIME
-        local duration_raw=$(( end_step - _STEP_START ))
-        local duration_pretty=$(format_time $duration_raw)
-        local cmd_status="SUCCESS"
-        [[ $exit_code -ne 0 ]] && cmd_status="FAILED"
+  local local_repo="$(get_local_repo)"
+  local exit_code=$?
 
-        local display_cmd=${_LAST_CMD:0:30}
-        
-        local header="TIMESTAMP           | COMMAND                        | STATUS  | DURATION"
-        if [[ ! -f "$LOG_FILE" ]]; then
-            echo "$header" > "$LOG_FILE"
-            echo "--------------------------------------------------------------------------" >> "$LOG_FILE"
-        elif [[ "$(head -n 1 "$LOG_FILE")" != "$header" ]]; then
-            local temp_log=$(mktemp)
-            echo "$header" > "$temp_log"
-            echo "--------------------------------------------------------------------------" >> "$temp_log"
-            cat "$LOG_FILE" >> "$temp_log"
-            mv "$temp_log" "$LOG_FILE"
-        fi
-        
-        printf "%-19s | %-30s | %-7s | %s\n" \
-            "$(date +"$DATE_FORMAT")" \
-            "$display_cmd" \
-            "$cmd_status" \
-            "$duration_pretty" >> "$LOG_FILE"
-    
-        unset _LAST_CMD
-        unset _STEP_START
+  if [[ $local_repo == "" ]]; then
+    return
+  fi
+
+  if [[ -n "$_LAST_CMD" && -n "$_STEP_START" ]]; then
+    local end_step=$EPOCHREALTIME
+    local duration_raw=$(( end_step - _STEP_START ))
+    local duration_pretty=$(format_time $duration_raw)
+    local cmd_status="SUCCESS"
+    [[ $exit_code -ne 0 ]] && cmd_status="FAILED"
+
+    local display_cmd=${_LAST_CMD:0:30}
+
+    local table_columns="| %-19s | %-30s | %-7s | %8s | %-60s |\n"
+    local -a table_headers=("TIMESTAMP" "COMMAND" "STATUS" "DURATION" "REPO")
+
+    local header=$(printf "$table_columns" "${table_headers[@]}")
+
+    if [[ ! -f "$LOG_FILE" ]]; then
+      echo "$header" > "$LOG_FILE"
+      echo "--------------------------------------------------------------------------" >> "$LOG_FILE"
+
+    elif [[ "$(head -n 1 "$LOG_FILE")" != "$header" ]]; then
+      local temp_log=$(mktemp)
+      echo "$header" > "$temp_log"
+      echo "--------------------------------------------------------------------------" >> "$temp_log"
+      cat "$LOG_FILE" >> "$temp_log"
+      mv "$temp_log" "$LOG_FILE"
     fi
+
+
+    printf "$table_columns" \
+      "$(date +"$DATE_FORMAT")" \
+      "$display_cmd" \
+      "$cmd_status" \
+      "$duration_pretty" \
+      "$local_repo">> "$LOG_FILE"
+
+    unset _LAST_CMD
+    unset _STEP_START
+  fi
 }
+
+is_path_inside_repo() {
+  local path="$PWD"
+
+  while [ "$path" != "/" ]; do
+    if [ -d "$path/.git" ]; then
+      return 0
+    fi
+    path="${path:h}"
+  done
+  return 1
+
+}
+
+get_repo_url() {
+  git config --get remote.origin.url
+}
+
+get_local_repo() {
+  local local_repo=""
+  if is_path_inside_repo; then
+    local repourl=$(get_repo_url)
+    if [[ -n "$TK_REPOS" ]]; then
+      for repo in ${TK_REPOS[@]}; do
+        if [[ "$repourl" == "$repo"* ]]; then
+          echo "$repo"
+          return 0
+        fi
+      done
+    fi
+  fi
+  return 0
+}
+
 
 autoload -Uz add-zsh-hook
 add-zsh-hook preexec preexec_track_metrics
