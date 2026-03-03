@@ -17,6 +17,15 @@ To start tracking your commands, add the following line to your `.zshrc`:
 source $(brew --prefix commands-time-tracker)/share/commands-time-tracker/time_tracker.sh
 ```
 
+Directory Filtering (Optional)
+
+You can restrict the tracker to only log commands executed within a specific project folder. Add the following environment variable to your .zshrc:
+
+```bash
+# Only track commands when the terminal path contains this folder name
+export TRACK_FOLDER="my-project-name"
+```
+
 ## Configuration
 The tool supports automatic generation of weekly summaries. You can enable this by adding a cron job to your system.
 
