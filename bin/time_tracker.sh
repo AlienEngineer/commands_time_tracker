@@ -54,8 +54,6 @@ precmd_track_metrics() {
     local cmd_status="SUCCESS"
     [[ $exit_code -ne 0 ]] && cmd_status="FAILED"
 
-    local display_cmd=${_LAST_CMD:0:30}
-
     # Ensure header exists
     local table_columns="| %-19s | %-30s | %-7s | %8s | %-60s |\n"
     local -a table_headers=("TIMESTAMP" "COMMAND" "STATUS" "DURATION" "REPO")
@@ -74,6 +72,7 @@ precmd_track_metrics() {
       mv "$temp_log" "$LOG_FILE"
     fi
 
+    local display_cmd=${_TRACK_CMD:0:30}
 
     printf "$table_columns" \
       "$(date +"$DATE_FORMAT")" \
@@ -111,7 +110,7 @@ get_local_repo() {
     if [[ -n "$TK_REPOS" ]]; then
       for repo in ${TK_REPOS[@]}; do
         if [[ "$repourl" == "$repo"* ]]; then
-          echo "$repo"
+          echo "$repourl"
           return 0
         fi
       done
