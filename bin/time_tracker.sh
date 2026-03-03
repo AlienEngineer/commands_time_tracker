@@ -67,7 +67,7 @@ precmd_track_metrics() {
     local -a table_headers=("TIMESTAMP" "COMMAND" "STATUS" "DURATION" "REPO")
 
     local header=$(printf "$table_columns" "${table_headers[@]}")
-    local separator=$(printf '=%.0s' {1..140})
+    local separator=$(printf '=%.0s' {1..130})
 
     if [[ ! -f "$LOG_FILE" ]]; then
       echo "$header" >"$LOG_FILE"
@@ -116,8 +116,8 @@ get_local_repo() {
   local local_repo=""
   if is_path_inside_repo; then
     local repourl=$(get_repo_url)
-    if [[ -n "$TK_REPOS" ]]; then
-      for repo in ${TK_REPOS[@]}; do
+    if [[ -n "$TIME_TRACK_REPOS" ]]; then
+      for repo in ${[TIME_TRACK_REPOS@]}; do
         if [[ "$repourl" == "$repo"* ]]; then
           echo "$repourl"
           return 0
